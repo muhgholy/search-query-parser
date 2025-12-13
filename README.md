@@ -145,11 +145,11 @@ Parse a search query string into an array of terms.
 
 ```typescript
 const terms = parse('"hello world" from:john -spam', {
-	allowedOperators: ["from", "to"], // Only allow specific operators
+	operatorsAllowed: ["from", "to"], // Only allow specific operators
 	// OR
-	disallowedOperators: ["size"], // Block specific operators
+	operatorsDisallowed: ["size"], // Block specific operators
 	// Custom operators
-	customOperators: [{ name: "priority", aliases: ["p"], type: "priority", valueType: "string", allowNegation: true }],
+	operators: [{ name: "priority", aliases: ["p"], type: "priority", valueType: "string", allowNegation: true }],
 });
 ```
 
@@ -208,7 +208,7 @@ summarize('"Promo" from:newsletter after:-7d');
 ## Types
 
 ```typescript
-type TTermType =
+type TDefaultTermType =
 	| "text" // Plain text
 	| "phrase" // Exact phrase
 	| "from" // From filter
@@ -225,11 +225,12 @@ type TTermType =
 	| "label" // Label filter
 	| "size" // Size filter
 	| "or" // Logical OR
-	| "group" // Parenthesized group
-	| (string & {}); // Custom types
+	| "group"; // Parenthesized group
 
-type TParsedTerm = {
-	type: TTermType;
+type TTermType = TDefaultTermType;
+
+type TParsedTerm<T extends string = TTermType> = {
+	type: T;
 	value: string;
 	negated: boolean;
 	date?: Date; // Resolved date (for date types)
@@ -243,17 +244,16 @@ type TParsedTerm = {
 		op: "gt" | "lt" | "eq";
 		bytes: number;
 	};
-	terms?: TParsedTerm[]; // For 'or' and 'group' types
+	terms?: TParsedTerm<T>[]; // For 'or' and 'group' types
 };
 
-type TParseResult = TParsedTerm[];
+type TParseResult<T extends string = TTermType> = TParsedTerm<T>[];
 
-type TParserOptions = {
-	operators?: TOperatorDef[];
-	customOperators?: TOperatorDef[];
+type TParserOptions<T extends string = TTermType> = {
+	operators?: TOperatorDef<T>[];
 	caseSensitive?: boolean;
-	allowedOperators?: string[];
-	disallowedOperators?: string[];
+	operatorsAllowed?: string[];
+	operatorsDisallowed?: string[];
 };
 ```
 

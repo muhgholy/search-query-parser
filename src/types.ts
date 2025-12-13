@@ -21,7 +21,7 @@ export type TToken = {
 }
 
 // ** Parsed Term Types
-export type TTermType =
+export type TDefaultTermType =
     | 'text'           // General text search
     | 'phrase'         // Exact phrase match
     | 'from'           // From address/name
@@ -40,11 +40,12 @@ export type TTermType =
     | 'size'           // Size comparison
     | 'or'             // Logical OR
     | 'group'          // Parenthesized group
-    | (string & {})    // Allow custom types
+
+export type TTermType = TDefaultTermType
 
 // ** Single parsed term - the main output unit
-export type TParsedTerm = {
-    type: TTermType
+export type TParsedTerm<T extends string = TTermType> = {
+    type: T
     value: string
     negated: boolean
     date?: Date              // Resolved date for date types
@@ -56,26 +57,25 @@ export type TParsedTerm = {
         op: 'gt' | 'lt' | 'eq'
         bytes: number
     }
-    terms?: TParsedTerm[]    // For 'or' and 'group' types
+    terms?: TParsedTerm<T>[]    // For 'or' and 'group' types
 }
 
 // ** Parser result - simple array
-export type TParseResult = TParsedTerm[]
+export type TParseResult<T extends string = TTermType> = TParsedTerm<T>[]
 
 // ** Operator Definition for extensibility
-export type TOperatorDef = {
+export type TOperatorDef<T extends string = TTermType> = {
     name: string
     aliases: string[]
-    type: TTermType
+    type: T
     valueType: 'string' | 'date' | 'size'
     allowNegation: boolean
 }
 
 // ** Parser Options
-export type TParserOptions = {
-    operators?: TOperatorDef[]
-    customOperators?: TOperatorDef[]
+export type TParserOptions<T extends string = TTermType> = {
+    operators?: TOperatorDef<T>[]
     caseSensitive?: boolean
-    allowedOperators?: string[]
-    disallowedOperators?: string[]
+    operatorsAllowed?: string[]
+    operatorsDisallowed?: string[]
 }

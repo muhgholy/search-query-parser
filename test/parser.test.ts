@@ -289,32 +289,32 @@ describe('parser', () => {
 
         describe('operator validation', () => {
             it('should allow allowed operators', () => {
-                const result = parse('from:john', { allowedOperators: ['from'] })
+                const result = parse('from:john', { operatorsAllowed: ['from'] })
                 expect(result).toHaveLength(1)
                 expect(result[0].type).toBe('from')
             })
 
-            it('should throw error for disallowed operators (via allowedOperators)', () => {
+            it('should throw error for disallowed operators (via operatorsAllowed)', () => {
                 expect(() => {
-                    parse('to:jane', { allowedOperators: ['from'] })
+                    parse('to:jane', { operatorsAllowed: ['from'] })
                 }).toThrow("Operator 'to' is not allowed")
             })
 
-            it('should throw error for disallowed operators (via disallowedOperators)', () => {
+            it('should throw error for disallowed operators (via operatorsDisallowed)', () => {
                 expect(() => {
-                    parse('from:john', { disallowedOperators: ['from'] })
+                    parse('from:john', { operatorsDisallowed: ['from'] })
                 }).toThrow("Operator 'from' is not allowed")
             })
 
-            it('should allow operators not in disallowedOperators', () => {
-                const result = parse('to:jane', { disallowedOperators: ['from'] })
+            it('should allow operators not in operatorsDisallowed', () => {
+                const result = parse('to:jane', { operatorsDisallowed: ['from'] })
                 expect(result).toHaveLength(1)
                 expect(result[0].type).toBe('to')
             })
 
             it('should validate negated operators', () => {
                 expect(() => {
-                    parse('-from:john', { disallowedOperators: ['from'] })
+                    parse('-from:john', { operatorsDisallowed: ['from'] })
                 }).toThrow("Operator 'from' is not allowed")
             })
         })
@@ -361,8 +361,8 @@ describe('parser', () => {
                     { name: 'priority', aliases: ['p'], type: 'priority', valueType: 'string', allowNegation: true }
                 ]
 
-                // @ts-ignore - custom type
-                const result = parse('priority:high', { customOperators: customOps })
+                // @ts-expect-error - custom type
+                const result = parse('priority:high', { operators: customOps })
                 expect(result).toHaveLength(1)
                 expect(result[0]).toMatchObject({
                     type: 'priority',
@@ -372,12 +372,12 @@ describe('parser', () => {
             })
 
             it('should override default operators', () => {
-                const customOps = [
-                    { name: 'from', aliases: [], type: 'custom-from', valueType: 'string', allowNegation: true }
-                ]
+                const result = parse('from:me', {
+                    operators: [
+                        { name: 'from', aliases: [], type: 'custom-from', valueType: 'string', allowNegation: true }
+                    ]
+                })
 
-                // @ts-ignore - custom type
-                const result = parse('from:me', { customOperators: customOps })
                 expect(result).toHaveLength(1)
                 expect(result[0]).toMatchObject({
                     type: 'custom-from',
@@ -390,8 +390,8 @@ describe('parser', () => {
                     { name: 'priority', aliases: ['p'], type: 'priority', valueType: 'string', allowNegation: true }
                 ]
 
-                // @ts-ignore - custom type
-                const result = parse('p:high', { customOperators: customOps })
+                // @ts-expect-error - custom type
+                const result = parse('p:high', { operators: customOps })
                 expect(result).toHaveLength(1)
                 expect(result[0]).toMatchObject({
                     type: 'priority',

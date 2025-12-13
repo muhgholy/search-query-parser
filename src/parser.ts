@@ -3,12 +3,12 @@
  * Converts tokens into array of parsed terms
  */
 
-import type { TToken, TParsedTerm, TParseResult, TTermType, TOperatorDef, TParserOptions } from './types'
+import type { TToken, TParsedTerm, TParseResult, TTermType, TOperatorDef, TParserOptions, TDefaultTermType } from './types'
 import { tokenize, parseOperator } from './tokenizer'
 import { parseDate } from './date'
 
 // ** Default operators
-const DEFAULT_OPERATORS: TOperatorDef[] = [
+const DEFAULT_OPERATORS: TOperatorDef<TDefaultTermType>[] = [
     { name: 'from', aliases: ['f', 'sender'], type: 'from', valueType: 'string', allowNegation: true },
     { name: 'to', aliases: ['t', 'recipient'], type: 'to', valueType: 'string', allowNegation: true },
     { name: 'subject', aliases: ['subj', 's'], type: 'subject', valueType: 'string', allowNegation: true },
@@ -28,7 +28,7 @@ const DEFAULT_OPERATORS: TOperatorDef[] = [
 /**
  * Find operator definition by key
  */
-const findOperator = (key: string, operators: TOperatorDef[]): TOperatorDef | null => {
+const findOperator = <T extends string>(key: string, operators: TOperatorDef<T>[]): TOperatorDef<T> | null => {
     const lowerKey = key.toLowerCase()
     for (const op of operators) {
         if (op.name === lowerKey || op.aliases.includes(lowerKey)) {
@@ -59,11 +59,11 @@ const parseSize = (value: string): { op: 'gt' | 'lt' | 'eq'; bytes: number } | n
 /**
  * Parse search string into array of terms
  */
-export const parse = (input: string, options: TParserOptions = {}): TParseResult => {
-    let operators = options.operators || DEFAULT_OPERATORS
-    if (options.customOperators) {
-        operators = [...options.customOperators, ...operators]
-    }
+export const parse = <T extends string = TTermType>(input: string, options: TParserOptions<T | TDefaultTermType> = {}): TParseResult<T | TDefaultTermType> => {
+    const defaultOps = DEFAULT_OPERATORS as TOperatorDef<T | TDefaultTermType>[]
+    const userOps = options.operators || []
+    const operators = [...userOps, ...defaultOps]
+
     const tokens = tokenize(input)
     return parseTokens(tokens, operators, options)
 }
@@ -71,8 +71,8 @@ export const parse = (input: string, options: TParserOptions = {}): TParseResult
 /**
  * Recursive function to parse tokens
  */
-const parseTokens = (tokens: TToken[], operators: TOperatorDef[], options: TParserOptions): TParseResult => {
-    const terms: TParsedTerm[] = []
+const parseTokens = <T extends string>(tokens: TToken[], operators: TOperatorDef<T>[], options: TParserOptions<T>): TParseResult<T> => {
+    const terms: TParsedTerm<T>[] = []
     let i = 0
 
     while (i < tokens.length) {
@@ -97,7 +97,7 @@ const parseTokens = (tokens: TToken[], operators: TOperatorDef[], options: TPars
                 // If inner terms are empty, skip
                 if (innerTerms.length > 0) {
                     terms.push({
-                        type: 'group',
+                        type: 'group' as T,
                         value: '',
                         negated: false,
                         terms: innerTerms
@@ -125,7 +125,7 @@ const parseTokens = (tokens: TToken[], operators: TOperatorDef[], options: TPars
 
         if (token.type === 'OR') {
             terms.push({
-                type: 'or',
+                type: 'or' as T,
                 value: 'OR',
                 negated: false
             })
@@ -150,13 +150,13 @@ const parseTokens = (tokens: TToken[], operators: TOperatorDef[], options: TPars
 /**
  * Handle OR logic and implicit AND grouping
  */
-const processOrLogic = (terms: TParsedTerm[]): TParsedTerm[] => {
+const processOrLogic = <T extends string>(terms: TParsedTerm<T>[]): TParsedTerm<T>[] => {
     // Check if there are any OR terms
     const hasOr = terms.some(t => t.type === 'or')
     if (!hasOr) return terms
 
-    let currentGroup: TParsedTerm[] = []
-    const orGroups: TParsedTerm[][] = []
+    let currentGroup: TParsedTerm<T>[] = []
+    const orGroups: TParsedTerm<T>[][] = []
 
     for (const term of terms) {
         if (term.type === 'or') {
@@ -178,7 +178,7 @@ const processOrLogic = (terms: TParsedTerm[]): TParsedTerm[] => {
         const processedGroups = orGroups.map(group => {
             if (group.length === 1) return group[0]
             return {
-                type: 'group' as TTermType,
+                type: 'group' as T,
                 value: '',
                 negated: false,
                 terms: group
@@ -186,7 +186,7 @@ const processOrLogic = (terms: TParsedTerm[]): TParsedTerm[] => {
         })
 
         return [{
-            type: 'or',
+            type: 'or' as T,
             value: '',
             negated: false,
             terms: processedGroups
@@ -199,18 +199,18 @@ const processOrLogic = (terms: TParsedTerm[]): TParsedTerm[] => {
 /**
  * Parse a single token into a parsed term
  */
-const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOptions): TParsedTerm | TParsedTerm[] | null => {
+const parseToken = <T extends string>(token: TToken, operators: TOperatorDef<T>[], options: TParserOptions<T>): TParsedTerm<T> | TParsedTerm<T>[] | null => {
     switch (token.type) {
         case 'TEXT':
             return {
-                type: 'text',
+                type: 'text' as T,
                 value: token.value,
                 negated: false
             }
 
         case 'QUOTED':
             return {
-                type: 'phrase',
+                type: 'phrase' as T,
                 value: token.value,
                 negated: false
             }
@@ -249,7 +249,7 @@ const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOp
             const isPhrase = token.raw.includes('"') || token.raw.includes("'")
 
             return {
-                type: isPhrase ? 'phrase' : 'text',
+                type: isPhrase ? 'phrase' as T : 'text' as T,
                 value: token.value,
                 negated: true
             }
@@ -276,7 +276,7 @@ const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOp
                     })
 
                     return {
-                        type: 'or',
+                        type: 'or' as T,
                         value: 'OR',
                         negated: false,
                         terms: subTerms
@@ -292,7 +292,7 @@ const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOp
 
             // Unknown operator, treat as text
             return {
-                type: 'text',
+                type: 'text' as T,
                 value: token.value,
                 negated: false
             }
@@ -306,11 +306,11 @@ const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOp
 /**
  * Validate if operator is allowed
  */
-const validateOperator = (opDef: TOperatorDef, options: TParserOptions): void => {
-    if (options.allowedOperators && !options.allowedOperators.includes(opDef.name)) {
+const validateOperator = <T extends string>(opDef: TOperatorDef<T>, options: TParserOptions<T>): void => {
+    if (options.operatorsAllowed && !options.operatorsAllowed.includes(opDef.name)) {
         throw new Error(`Operator '${opDef.name}' is not allowed`)
     }
-    if (options.disallowedOperators && options.disallowedOperators.includes(opDef.name)) {
+    if (options.operatorsDisallowed && options.operatorsDisallowed.includes(opDef.name)) {
         throw new Error(`Operator '${opDef.name}' is not allowed`)
     }
 }
@@ -318,13 +318,13 @@ const validateOperator = (opDef: TOperatorDef, options: TParserOptions): void =>
 /**
  * Build term with proper value parsing
  */
-const buildTerm = (
-    type: TTermType,
+const buildTerm = <T extends string>(
+    type: T,
     value: string,
     negated: boolean,
     valueType: 'string' | 'date' | 'size'
-): TParsedTerm => {
-    const term: TParsedTerm = { type, value, negated }
+): TParsedTerm<T> => {
+    const term: TParsedTerm<T> = { type, value, negated }
 
     if (valueType === 'date') {
         const dateVal = parseDate(value)
