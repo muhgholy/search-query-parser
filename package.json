@@ -53,6 +53,9 @@
 	},
 	"homepage": "https://github.com/muhgholy/string-search-builder#readme",
 	"devDependencies": {
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/exec": "^7.1.0",
+		"@semantic-release/git": "^10.0.1",
 		"@types/node": "^20.10.0",
 		"@typescript-eslint/eslint-plugin": "^6.13.0",
 		"@typescript-eslint/parser": "^6.13.0",
@@ -76,6 +79,7 @@
 		"plugins": [
 			"@semantic-release/commit-analyzer",
 			"@semantic-release/release-notes-generator",
+			"@semantic-release/changelog",
 			[
 				"@semantic-release/exec",
 				{
@@ -88,6 +92,7 @@
 				"@semantic-release/git",
 				{
 					"assets": [
+						"CHANGELOG.md",
 						"package.json",
 						"package-lock.json"
 					],
