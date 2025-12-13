@@ -147,7 +147,6 @@ const processOrLogic = (terms: TParsedTerm[]): TParsedTerm[] => {
     const hasOr = terms.some(t => t.type === 'or')
     if (!hasOr) return terms
 
-    const result: TParsedTerm[] = []
     let currentGroup: TParsedTerm[] = []
     const orGroups: TParsedTerm[][] = []
 

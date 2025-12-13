@@ -1,0 +1,46 @@
+name: Release
+
+on:
+     push:
+          branches:
+               - master
+
+permissions:
+     contents: write # to be able to publish a GitHub release
+     issues: write # to be able to comment on released issues
+     pull-requests: write # to be able to comment on released pull requests
+     id-token: write # to enable use of OIDC for npm provenance
+
+jobs:
+     release:
+          name: Release
+          runs-on: ubuntu-latest
+          steps:
+               - name: Checkout
+                 uses: actions/checkout@v4
+                 with:
+                      fetch-depth: 0 # required for semantic-release to analyze commits
+
+               - name: Setup Node.js
+                 uses: actions/setup-node@v4
+                 with:
+                      node-version: "lts/*"
+                      registry-url: "https://registry.npmjs.org"
+
+               - name: Install dependencies
+                 run: npm ci
+
+               - name: Verify Tests
+                 run: npm test
+
+               - name: Semantic Release
+                 uses: cycjimmy/semantic-release-action@v4
+                 env:
+                      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                      # NPM_TOKEN is not needed for Trusted Publishing if configured correctly,
+                      # but semantic-release might require a dummy token or specific config.
+                      # We rely on .npmrc created by setup-node and provenance in package.json.
+                 with:
+                      extra_plugins: |
+                           @semantic-release/git
+                           @semantic-release/changelog
