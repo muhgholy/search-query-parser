@@ -1,6 +1,6 @@
 {
 	"name": "@muhgholy/search-query-parser",
-	"version": "1.0.1",
+	"version": "2.0.0",
 	"description": "A portable, framework-agnostic search query parser with Gmail-like syntax support",
 	"type": "module",
 	"main": "./dist/index.cjs",

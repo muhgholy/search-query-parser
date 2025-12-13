@@ -1,3 +1,13 @@
+# [2.0.0](https://github.com/muhgholy/search-query-parser/compare/v1.0.0...v2.0.0) (2025-12-13)
+
+
+* feat!: refactor parser options and types ([fab4698](https://github.com/muhgholy/search-query-parser/commit/fab4698d81a671058487582348fdfe7a37ee9e73))
+
+
+### BREAKING CHANGES
+
+* renamed allowedOperators to operatorsAllowed, disallowedOperators to operatorsDisallowed, and removed customOperators in favor of operators.
+
 # 1.0.0 (2025-12-13)
 
 
