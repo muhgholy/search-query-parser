@@ -1,3 +1,11 @@
+# 1.0.0 (2025-12-13)
+
+
+### Bug Fixes
+
+* allow npm version to set same version ([8f8b71b](https://github.com/muhgholy/string-search-builder/commit/8f8b71b3ef827a0fa5b3167788ed97b21a702b83))
+* replace semantic-release/npm with exec to bypass token check ([7e5b4d7](https://github.com/muhgholy/string-search-builder/commit/7e5b4d788054394cf786bd9a237d3cf717bac198))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
