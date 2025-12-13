@@ -1,5 +1,5 @@
 /**
- * Search Builder Types
+ * Search Query Parser Types
  * Portable type definitions for search query parsing
  */
 

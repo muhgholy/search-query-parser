@@ -1,5 +1,5 @@
 /**
- * Search Builder - Tokenizer
+ * Search Query Parser - Tokenizer
  * Converts raw search string into tokens
  */
 

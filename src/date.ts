@@ -1,5 +1,5 @@
 /**
- * Search Builder - Date Parser
+ * Search Query Parser - Date Parser
  * Parses date strings into Date objects
  * Supports: YYYY-MM-DD, relative (-7d, -1w), natural (last week, yesterday)
  */

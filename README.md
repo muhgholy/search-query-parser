@@ -1,7 +1,7 @@
-# Search Builder
+# Search Query Parser
 
-[![npm version](https://badge.fury.io/js/@muhgholy%2Fstring-search-builder.svg)](https://www.npmjs.com/package/@muhgholy/string-search-builder)
-[![CI](https://github.com/muhgholy/string-search-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/muhgholy/string-search-builder/actions/workflows/ci.yml)
+[![npm version](https://badge.fury.io/js/@muhgholy%2Fsearch-query-parser.svg)](https://www.npmjs.com/package/@muhgholy/search-query-parser)
+[![CI](https://github.com/muhgholy/search-query-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/muhgholy/search-query-parser/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A portable, framework-agnostic search query parser with Gmail-like syntax support. Zero dependencies, TypeScript-first, and optimized for performance.
@@ -18,21 +18,21 @@ A portable, framework-agnostic search query parser with Gmail-like syntax suppor
 ## Installation
 
 ```bash
-npm install @muhgholy/string-search-builder
+npm install @muhgholy/search-query-parser
 ```
 
 ```bash
-yarn add @muhgholy/string-search-builder
+yarn add @muhgholy/search-query-parser
 ```
 
 ```bash
-pnpm add @muhgholy/string-search-builder
+pnpm add @muhgholy/search-query-parser
 ```
 
 ## Usage
 
 ```typescript
-import { parse } from "@muhgholy/string-search-builder";
+import { parse } from "@muhgholy/search-query-parser";
 
 const terms = parse('"Promo Code" -spam from:newsletter after:-7d');
 
@@ -240,7 +240,7 @@ type TParserOptions = {
 ### MongoDB Integration
 
 ```typescript
-import { parse, escapeRegex } from "@muhgholy/string-search-builder";
+import { parse, escapeRegex } from "@muhgholy/search-query-parser";
 
 function buildMongoQuery(searchQuery: string) {
 	const terms = parse(searchQuery);
@@ -274,7 +274,7 @@ function buildMongoQuery(searchQuery: string) {
 ### SQL Integration
 
 ```typescript
-import { parse, escapeRegex } from "@muhgholy/string-search-builder";
+import { parse, escapeRegex } from "@muhgholy/search-query-parser";
 
 function buildSQLWhere(searchQuery: string) {
 	const terms = parse(searchQuery);

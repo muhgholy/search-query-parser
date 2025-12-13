@@ -1,5 +1,5 @@
 {
-	"name": "@muhgholy/string-search-builder",
+	"name": "@muhgholy/search-query-parser",
 	"version": "1.0.0",
 	"description": "A portable, framework-agnostic search query parser with Gmail-like syntax support",
 	"type": "module",
@@ -46,12 +46,12 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/muhgholy/string-search-builder.git"
+		"url": "git+https://github.com/muhgholy/search-query-parser.git"
 	},
 	"bugs": {
-		"url": "https://github.com/muhgholy/string-search-builder/issues"
+		"url": "https://github.com/muhgholy/search-query-parser/issues"
 	},
-	"homepage": "https://github.com/muhgholy/string-search-builder#readme",
+	"homepage": "https://github.com/muhgholy/search-query-parser#readme",
 	"devDependencies": {
 		"@semantic-release/changelog": "^6.0.3",
 		"@semantic-release/exec": "^7.1.0",

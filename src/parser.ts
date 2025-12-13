@@ -1,5 +1,5 @@
 /**
- * Search Builder - Parser
+ * Search Query Parser - Parser
  * Converts tokens into array of parsed terms
  */
 

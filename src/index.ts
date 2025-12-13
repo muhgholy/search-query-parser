@@ -1,5 +1,5 @@
 /**
- * Search Builder
+ * Search Query Parser
  * A portable, framework-agnostic search query parser
  * 
  * Supports Gmail-like search syntax:
@@ -12,7 +12,7 @@
  * 
  * @example
  * ```typescript
- * import { parse } from '@muhgholy/string-search-builder'
+ * import { parse } from '@muhgholy/search-query-parser'
  * 
  * const terms = parse('"Promo" -Minimum after:-7d from:newsletter')
  * // Returns: TParsedTerm[]
