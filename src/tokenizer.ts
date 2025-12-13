@@ -139,24 +139,6 @@ export const tokenize = (input: string): TToken[] => {
 
                 // Negated group: -(...)
                 if (nextChar === CHAR_LPAREN) {
-                    // We don't handle negated groups directly in tokenizer as a single token
-                    // Instead, we emit a NEGATED token with empty value or special marker?
-                    // Actually, for -(...), we might want to treat it as a NEGATED token followed by a GROUP?
-                    // Or maybe just emit a special token?
-                    // Let's stick to simple tokens. 
-                    // If we see -(, it's a negation of the group.
-                    // But our current NEGATED token expects a value.
-                    // Let's treat -( as a special case in parser, or maybe just emit a NEGATED token with value '('?
-                    // No, that's confusing.
-
-                    // Let's try to read until delimiter.
-                    // If we have -(term), readUntilDelimiter will stop at (.
-                    // Wait, readUntilDelimiter stops at (.
-
-                    // If we have -term, readUntilDelimiter reads 'term'.
-                    // If we have -(, readUntilDelimiter reads empty string.
-
-                    // Let's handle it:
                     const value = readUntilDelimiter()
                     if (value) {
                         tokens.push({
@@ -166,39 +148,50 @@ export const tokenize = (input: string): TToken[] => {
                             position: startPos
                         })
                     } else if (input[position] === CHAR_LPAREN) {
-                        // It was a negation before a parenthesis
-                        // We can emit a special NEGATED token that indicates the next thing is negated?
-                        // Or maybe we just treat it as text '-' and let parser handle it?
-                        // But parser expects NEGATED token.
-
-                        // Let's backtrack. If we see -(, we should probably treat it as a NEGATED token with empty value?
-                        // Or maybe we change NEGATED to be a modifier?
-
-                        // For now, let's assume the user won't do -(...) for this iteration, 
-                        // or if they do, we handle it as text '-' then '('.
-                        // But wait, the user requirement is ("discount" or "promo") -minimum.
-                        // -minimum is standard negation.
-
-                        // If the user does -(foo or bar), that's harder.
-                        // Let's stick to the requested requirement first.
-
-                        // Revert position for now if we didn't find a value
-                        // position--
-                        // Actually, if readUntilDelimiter returns empty, it means we hit a delimiter immediately.
-                        // If it's (, then we have -(.
-
-                        // Let's just treat - as text if it's not followed by something we can negate immediately?
-                        // Or we can emit a TEXT token for '-'.
-
-                        // Let's keep it simple. If readUntilDelimiter returns empty, we assume it's not a negation token we can handle here.
-                        // We backtrack and let it be handled as text or symbol.
                         position--
                     }
                     continue
                 }
 
                 // Negated term: -something
-                const value = readUntilDelimiter()
+                let value = readUntilDelimiter()
+
+                // Handle -key:"value" or -key:val1,val2
+                if (value.endsWith(CHAR_COLON)) {
+                    // It's a negated operator prefix
+                    // Try to read the value(s)
+                    while (true) {
+                        if (position < length) {
+                            const nc = input[position]
+                            if (nc === CHAR_QUOTE_DOUBLE || nc === CHAR_QUOTE_SINGLE) {
+                                const startQ = position
+                                readQuoted(nc)
+                                value += input.slice(startQ, position)
+                            } else {
+                                // Read text part until comma or delimiter
+                                let part = ''
+                                while (position < length) {
+                                    const c = input[position]
+                                    if (c === ',' || c === CHAR_SPACE || c === CHAR_LPAREN || c === CHAR_RPAREN || c === CHAR_QUOTE_DOUBLE || c === CHAR_QUOTE_SINGLE) {
+                                        break
+                                    }
+                                    part += c
+                                    position++
+                                }
+                                value += part
+                            }
+                        }
+
+                        // Check for comma to continue
+                        if (position < length && input[position] === ',') {
+                            value += ','
+                            position++
+                            continue
+                        }
+                        break
+                    }
+                }
+
                 if (value) {
                     tokens.push({
                         type: 'NEGATED',
@@ -248,42 +241,99 @@ export const tokenize = (input: string): TToken[] => {
         // Check for operator syntax (key:value)
         const colonIndex = text.indexOf(CHAR_COLON)
 
-        if (colonIndex > 0 && colonIndex < text.length - 1) {
-            // Has colon with content on both sides = operator
-            tokens.push({
-                type: 'OPERATOR',
-                value: text,
-                raw: input.slice(startPos, position),
-                position: startPos
-            })
-        } else if (colonIndex > 0 && colonIndex === text.length - 1) {
-            // Colon at end: operator with quoted value following
-            // e.g., from:"John Doe"
-            const key = text.slice(0, -1)
-            skipWhitespace()
+        if (colonIndex > 0) {
+            let key = ''
+            let fullValue = ''
 
-            if (position < length) {
-                const nextChar = input[position]
-
-                if (nextChar === CHAR_QUOTE_DOUBLE || nextChar === CHAR_QUOTE_SINGLE) {
-                    const quotedValue = readQuoted(nextChar)
-                    tokens.push({
-                        type: 'OPERATOR',
-                        value: `${key}:${quotedValue}`,
-                        raw: input.slice(startPos, position),
-                        position: startPos
-                    })
-                    continue
-                }
+            if (colonIndex === text.length - 1) {
+                key = text.slice(0, -1)
+            } else {
+                key = text.slice(0, colonIndex)
+                fullValue = text.slice(colonIndex + 1)
             }
 
-            // No quoted value, treat as text
-            tokens.push({
-                type: 'TEXT',
-                value: text,
-                raw: input.slice(startPos, position),
-                position: startPos
-            })
+            // Try to extend value (comma separated or quoted following colon)
+            while (true) {
+                // If we are at the start (empty value) or just consumed a comma, we expect a value
+                // If fullValue is empty (case key:), we definitely look for next
+                // If fullValue ends with comma, we look for next
+
+                const needsValue = fullValue.length === 0 || fullValue.endsWith(',')
+
+                if (needsValue && position < length) {
+                    const nc = input[position]
+                    if (nc === CHAR_QUOTE_DOUBLE || nc === CHAR_QUOTE_SINGLE) {
+                        const startQ = position
+                        readQuoted(nc)
+                        fullValue += input.slice(startQ, position)
+                    } else if (fullValue.length === 0) {
+                        // If we are at key: and no quote, and we already read text which was just key:
+                        // Then we might have text following?
+                        // But readUntilDelimiter already consumed text.
+                        // So if fullValue is empty, it means text was just "key:".
+                        // So we look for value.
+
+                        // Read text part
+                        let part = ''
+                        while (position < length) {
+                            const c = input[position]
+                            if (c === ',' || c === CHAR_SPACE || c === CHAR_LPAREN || c === CHAR_RPAREN || c === CHAR_QUOTE_DOUBLE || c === CHAR_QUOTE_SINGLE) {
+                                break
+                            }
+                            part += c
+                            position++
+                        }
+                        fullValue += part
+                    } else {
+                        // We have some value, but it ended with comma (handled below)
+                        // So we read next part
+                        let part = ''
+                        while (position < length) {
+                            const c = input[position]
+                            if (c === ',' || c === CHAR_SPACE || c === CHAR_LPAREN || c === CHAR_RPAREN || c === CHAR_QUOTE_DOUBLE || c === CHAR_QUOTE_SINGLE) {
+                                break
+                            }
+                            part += c
+                            position++
+                        }
+                        fullValue += part
+                    }
+                }
+
+                // Check for comma
+                if (position < length && input[position] === ',') {
+                    fullValue += ','
+                    position++
+                    continue
+                }
+
+                break
+            }
+
+            // If we have a value or it was just key: (which might be treated as text later if invalid)
+            // But here we assume it's operator if it has colon.
+            // If value is empty, it's key: which is valid operator with empty value?
+            // Or maybe text?
+            // Original code: if colonIndex === text.length - 1, and no quoted value, treat as text.
+
+            if (fullValue.length > 0 || colonIndex < text.length - 1) {
+                tokens.push({
+                    type: 'OPERATOR',
+                    value: `${key}:${fullValue}`,
+                    raw: input.slice(startPos, position),
+                    position: startPos
+                })
+                continue
+            } else {
+                // key: with no value. Treat as text.
+                tokens.push({
+                    type: 'TEXT',
+                    value: text,
+                    raw: input.slice(startPos, position),
+                    position: startPos
+                })
+                continue
+            }
         } else {
             // Plain text
             tokens.push({

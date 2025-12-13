@@ -71,7 +71,7 @@ describe('tokenizer', () => {
             const tokens = tokenize('from:"John Doe"')
             expect(tokens).toHaveLength(1)
             expect(tokens[0].type).toBe('OPERATOR')
-            expect(tokens[0].value).toBe('from:John Doe')
+            expect(tokens[0].value).toBe('from:"John Doe"')
         })
 
         it('should handle mixed tokens', () => {

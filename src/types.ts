@@ -33,12 +33,14 @@ export type TTermType =
     | 'has'            // Has attachment, etc.
     | 'is'             // Is unread, read, etc.
     | 'in'             // In folder/box
+    | 'date'           // Specific date or range
     | 'before'         // Before date
     | 'after'          // After date
     | 'label'          // Label/tag
     | 'size'           // Size comparison
     | 'or'             // Logical OR
     | 'group'          // Parenthesized group
+    | (string & {})    // Allow custom types
 
 // ** Single parsed term - the main output unit
 export type TParsedTerm = {
@@ -46,6 +48,10 @@ export type TParsedTerm = {
     value: string
     negated: boolean
     date?: Date              // Resolved date for date types
+    dateRange?: {            // Resolved date range
+        start: Date
+        end: Date
+    }
     size?: {                 // Parsed size for size type
         op: 'gt' | 'lt' | 'eq'
         bytes: number
@@ -68,6 +74,7 @@ export type TOperatorDef = {
 // ** Parser Options
 export type TParserOptions = {
     operators?: TOperatorDef[]
+    customOperators?: TOperatorDef[]
     caseSensitive?: boolean
     allowedOperators?: string[]
     disallowedOperators?: string[]

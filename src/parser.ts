@@ -16,6 +16,7 @@ const DEFAULT_OPERATORS: TOperatorDef[] = [
     { name: 'has', aliases: [], type: 'has', valueType: 'string', allowNegation: true },
     { name: 'is', aliases: [], type: 'is', valueType: 'string', allowNegation: true },
     { name: 'in', aliases: ['folder', 'box', 'mailbox'], type: 'in', valueType: 'string', allowNegation: true },
+    { name: 'date', aliases: ['d'], type: 'date', valueType: 'date', allowNegation: false },
     { name: 'before', aliases: ['b4', 'older', 'older_than'], type: 'before', valueType: 'date', allowNegation: false },
     { name: 'after', aliases: ['af', 'newer', 'newer_than'], type: 'after', valueType: 'date', allowNegation: false },
     { name: 'label', aliases: ['tag', 'l'], type: 'label', valueType: 'string', allowNegation: true },
@@ -59,7 +60,10 @@ const parseSize = (value: string): { op: 'gt' | 'lt' | 'eq'; bytes: number } | n
  * Parse search string into array of terms
  */
 export const parse = (input: string, options: TParserOptions = {}): TParseResult => {
-    const operators = options.operators || DEFAULT_OPERATORS
+    let operators = options.operators || DEFAULT_OPERATORS
+    if (options.customOperators) {
+        operators = [...options.customOperators, ...operators]
+    }
     const tokens = tokenize(input)
     return parseTokens(tokens, operators, options)
 }
@@ -131,7 +135,11 @@ const parseTokens = (tokens: TToken[], operators: TOperatorDef[], options: TPars
 
         const term = parseToken(token, operators, options)
         if (term) {
-            terms.push(term)
+            if (Array.isArray(term)) {
+                terms.push(...term)
+            } else {
+                terms.push(term)
+            }
         }
         i++
     }
@@ -191,7 +199,7 @@ const processOrLogic = (terms: TParsedTerm[]): TParsedTerm[] => {
 /**
  * Parse a single token into a parsed term
  */
-const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOptions): TParsedTerm | null => {
+const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOptions): TParsedTerm | TParsedTerm[] | null => {
     switch (token.type) {
         case 'TEXT':
             return {
@@ -215,7 +223,24 @@ const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOp
                     const opDef = findOperator(parsed.key, operators)
                     if (opDef && opDef.allowNegation) {
                         validateOperator(opDef, options)
-                        return buildTerm(opDef.type, parsed.value, true, opDef.valueType)
+
+                        const values = splitValues(parsed.value)
+                        if (values.length > 1) {
+                            // Negated list: -to:a,b -> NOT a AND NOT b
+                            return values.map(v => {
+                                let cleanVal = v
+                                if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+                                    cleanVal = v.slice(1, -1)
+                                }
+                                return buildTerm(opDef.type, cleanVal, true, opDef.valueType)
+                            })
+                        }
+
+                        let cleanVal = parsed.value
+                        if ((cleanVal.startsWith('"') && cleanVal.endsWith('"')) || (cleanVal.startsWith("'") && cleanVal.endsWith("'"))) {
+                            cleanVal = cleanVal.slice(1, -1)
+                        }
+                        return buildTerm(opDef.type, cleanVal, true, opDef.valueType)
                     }
                 }
             }
@@ -238,7 +263,31 @@ const parseToken = (token: TToken, operators: TOperatorDef[], options: TParserOp
 
             if (opDef) {
                 validateOperator(opDef, options)
-                return buildTerm(opDef.type, parsed.value, false, opDef.valueType)
+
+                const values = splitValues(parsed.value)
+                if (values.length > 1) {
+                    // List: to:a,b -> a OR b
+                    const subTerms = values.map(v => {
+                        let cleanVal = v
+                        if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+                            cleanVal = v.slice(1, -1)
+                        }
+                        return buildTerm(opDef.type, cleanVal, false, opDef.valueType)
+                    })
+
+                    return {
+                        type: 'or',
+                        value: 'OR',
+                        negated: false,
+                        terms: subTerms
+                    }
+                }
+
+                let cleanVal = parsed.value
+                if ((cleanVal.startsWith('"') && cleanVal.endsWith('"')) || (cleanVal.startsWith("'") && cleanVal.endsWith("'"))) {
+                    cleanVal = cleanVal.slice(1, -1)
+                }
+                return buildTerm(opDef.type, cleanVal, false, opDef.valueType)
             }
 
             // Unknown operator, treat as text
@@ -279,8 +328,13 @@ const buildTerm = (
 
     if (valueType === 'date') {
         const dateVal = parseDate(value)
-        if (dateVal?.date) {
-            term.date = dateVal.date
+        if (dateVal) {
+            if (dateVal.date) {
+                term.date = dateVal.date
+            }
+            if (dateVal.dateRange) {
+                term.dateRange = dateVal.dateRange
+            }
         }
     } else if (valueType === 'size') {
         const sizeVal = parseSize(value)
@@ -343,4 +397,34 @@ export const validate = (input: string): { valid: boolean; errors: string[] } =>
     }
 
     return { valid: errors.length === 0, errors }
+}
+
+/**
+ * Split comma-separated values respecting quotes
+ */
+const splitValues = (input: string): string[] => {
+    const values: string[] = []
+    let current = ''
+    let inQuote = false
+    let quoteChar = ''
+
+    for (let i = 0; i < input.length; i++) {
+        const char = input[i]
+        if ((char === '"' || char === "'") && !inQuote) {
+            inQuote = true
+            quoteChar = char
+            current += char
+        } else if (char === quoteChar && inQuote) {
+            inQuote = false
+            quoteChar = ''
+            current += char
+        } else if (char === ',' && !inQuote) {
+            values.push(current)
+            current = ''
+        } else {
+            current += char
+        }
+    }
+    if (current) values.push(current)
+    return values
 }

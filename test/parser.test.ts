@@ -318,6 +318,87 @@ describe('parser', () => {
                 }).toThrow("Operator 'from' is not allowed")
             })
         })
+
+        describe('new features', () => {
+            it('should parse date range', () => {
+                const result = parse('date:2023-01-01-2023-12-31')
+                expect(result).toHaveLength(1)
+                expect(result[0]).toMatchObject({
+                    type: 'date',
+                    dateRange: {
+                        start: expect.any(Date),
+                        end: expect.any(Date)
+                    }
+                })
+            })
+
+            it('should parse list of values', () => {
+                const result = parse('to:"String 1",String2')
+                expect(result).toHaveLength(1)
+                expect(result[0]).toMatchObject({
+                    type: 'or',
+                    terms: [
+                        { type: 'to', value: 'String 1' },
+                        { type: 'to', value: 'String2' }
+                    ]
+                })
+            })
+
+            it('should parse negated operator with quotes', () => {
+                const result = parse('-from:"some@example.com"')
+                expect(result).toHaveLength(1)
+                expect(result[0]).toMatchObject({
+                    type: 'from',
+                    value: 'some@example.com',
+                    negated: true
+                })
+            })
+        })
+
+        describe('custom operators', () => {
+            it('should support custom operators', () => {
+                const customOps = [
+                    { name: 'priority', aliases: ['p'], type: 'priority', valueType: 'string', allowNegation: true }
+                ]
+
+                // @ts-ignore - custom type
+                const result = parse('priority:high', { customOperators: customOps })
+                expect(result).toHaveLength(1)
+                expect(result[0]).toMatchObject({
+                    type: 'priority',
+                    value: 'high',
+                    negated: false
+                })
+            })
+
+            it('should override default operators', () => {
+                const customOps = [
+                    { name: 'from', aliases: [], type: 'custom-from', valueType: 'string', allowNegation: true }
+                ]
+
+                // @ts-ignore - custom type
+                const result = parse('from:me', { customOperators: customOps })
+                expect(result).toHaveLength(1)
+                expect(result[0]).toMatchObject({
+                    type: 'custom-from',
+                    value: 'me'
+                })
+            })
+
+            it('should work with aliases', () => {
+                const customOps = [
+                    { name: 'priority', aliases: ['p'], type: 'priority', valueType: 'string', allowNegation: true }
+                ]
+
+                // @ts-ignore - custom type
+                const result = parse('p:high', { customOperators: customOps })
+                expect(result).toHaveLength(1)
+                expect(result[0]).toMatchObject({
+                    type: 'priority',
+                    value: 'high'
+                })
+            })
+        })
     })
 
     describe('extractOperators', () => {

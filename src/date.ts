@@ -69,7 +69,7 @@ const NATURAL_DATES: Record<string, () => Date> = {
  * Parse a date string into a Date object
  * Returns null if parsing fails
  */
-export const parseDate = (value: string): { date: Date } | null => {
+export const parseDate = (value: string): { date?: Date; dateRange?: { start: Date; end: Date } } | null => {
     const trimmed = value.trim().toLowerCase()
 
     // ** Try relative date (-7d, -1w, etc.)
@@ -86,13 +86,63 @@ export const parseDate = (value: string): { date: Date } | null => {
     }
 
     // ** Try absolute date (YYYY-MM-DD or other parseable formats)
-    const parsed = new Date(value)
-    if (!isNaN(parsed.getTime())) {
+    // We try this BEFORE range check because YYYY-MM-DD contains hyphens but is a single date
+    const parsed = parseAbsoluteDate(trimmed)
+    if (parsed) {
         return { date: parsed }
+    }
+
+    // ** Try date range (split by hyphen)
+    // We iterate through all hyphens to find a split that results in two valid dates
+    if (trimmed.includes('-')) {
+        const parts = trimmed.split('-')
+        // We need at least 2 parts to have a range
+        if (parts.length >= 2) {
+            for (let i = 1; i < parts.length; i++) {
+                const left = parts.slice(0, i).join('-')
+                const right = parts.slice(i).join('-')
+
+                // Skip if either side is empty
+                if (!left || !right) continue
+
+                // Check if both sides are valid dates
+                // We use a stricter check here to avoid false positives
+                const d1 = parseAbsoluteDate(left)
+                const d2 = parseAbsoluteDate(right)
+
+                if (d1 && d2) {
+                    return { dateRange: { start: d1, end: d2 } }
+                }
+            }
+        }
     }
 
     return null
 }
+
+/**
+ * Parse absolute date string
+ */
+const parseAbsoluteDate = (value: string): Date | null => {
+    // Simple check to avoid parsing numbers as dates (e.g. "2023") unless intended
+    // But new Date("2023") works.
+    // However, "1" works too (1901 or 2001?).
+    // Let's rely on Date.parse but maybe filter out simple numbers if needed?
+    // For now, standard Date parsing.
+
+    // Handle DD/MM/YYYY format which Date.parse might not handle correctly depending on locale
+    // But user example `1/10/2013` is ambiguous (Oct 1st or Jan 10th).
+    // Assuming standard JS behavior or ISO.
+    // If user wants specific format support, we might need a library or custom parser.
+    // For now, let's use new Date().
+
+    const parsed = new Date(value)
+    if (!isNaN(parsed.getTime())) {
+        return parsed
+    }
+    return null
+}
+
 
 /**
  * Resolve relative date to absolute Date

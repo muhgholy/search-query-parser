@@ -84,6 +84,16 @@ for (const term of terms) {
 | `( ... )`   | Grouping           | `(term1 term2)`       |
 | `OR`        | Logical OR         | `term1 OR term2`      |
 
+### Lists & Arrays
+
+Comma-separated values are automatically treated as OR conditions.
+
+| Syntax           | Description           | Example                |
+| ---------------- | --------------------- | ---------------------- |
+| `key:val1,val2`  | Value 1 OR Value 2    | `to:john,jane`         |
+| `key:"a","b"`    | Quoted list           | `to:"John Doe","Jane"` |
+| `-key:val1,val2` | NOT val1 AND NOT val2 | `-from:spam,marketing` |
+
 ### Operators
 
 | Operator    | Aliases            | Description       | Example                   |
@@ -98,19 +108,22 @@ for (const term of terms) {
 | `label:`    | `tag:`, `l:`       | Label/tag         | `label:important`         |
 | `header-k:` | `hk:`              | Header key        | `header-k:X-Custom`       |
 | `header-v:` | `hv:`              | Header value      | `header-v:"custom value"` |
+| `date:`     | `d:`               | Date/Range        | `date:2024-01-01`         |
 
 ### Date Filters
 
-| Syntax              | Description            | Example             |
-| ------------------- | ---------------------- | ------------------- |
-| `after:YYYY-MM-DD`  | After date (absolute)  | `after:2024-01-01`  |
-| `before:YYYY-MM-DD` | Before date (absolute) | `before:2024-12-31` |
-| `after:-Nd`         | After N days ago       | `after:-7d`         |
-| `after:-Nh`         | After N hours ago      | `after:-24h`        |
-| `after:-Nw`         | After N weeks ago      | `after:-2w`         |
-| `after:-Nm`         | After N months ago     | `after:-1m`         |
-| `after:-Ny`         | After N years ago      | `after:-1y`         |
-| `after:"natural"`   | Natural language       | `after:"last week"` |
+| Syntax              | Description            | Example                      |
+| ------------------- | ---------------------- | ---------------------------- |
+| `date:YYYY-MM-DD`   | Specific date          | `date:2024-01-01`            |
+| `date:Start-End`    | Date range             | `date:2024-01-01-2024-12-31` |
+| `after:YYYY-MM-DD`  | After date (absolute)  | `after:2024-01-01`           |
+| `before:YYYY-MM-DD` | Before date (absolute) | `before:2024-12-31`          |
+| `after:-Nd`         | After N days ago       | `after:-7d`                  |
+| `after:-Nh`         | After N hours ago      | `after:-24h`                 |
+| `after:-Nw`         | After N weeks ago      | `after:-2w`                  |
+| `after:-Nm`         | After N months ago     | `after:-1m`                  |
+| `after:-Ny`         | After N years ago      | `after:-1y`                  |
+| `after:"natural"`   | Natural language       | `after:"last week"`          |
 
 **Supported natural dates:** `today`, `yesterday`, `tomorrow`, `last week`, `last month`, `last year`, `this week`, `this month`, `this year`
 
@@ -135,6 +148,8 @@ const terms = parse('"hello world" from:john -spam', {
 	allowedOperators: ["from", "to"], // Only allow specific operators
 	// OR
 	disallowedOperators: ["size"], // Block specific operators
+	// Custom operators
+	customOperators: [{ name: "priority", aliases: ["p"], type: "priority", valueType: "string", allowNegation: true }],
 });
 ```
 
@@ -210,13 +225,19 @@ type TTermType =
 	| "label" // Label filter
 	| "size" // Size filter
 	| "or" // Logical OR
-	| "group"; // Parenthesized group
+	| "group" // Parenthesized group
+	| (string & {}); // Custom types
 
 type TParsedTerm = {
 	type: TTermType;
 	value: string;
 	negated: boolean;
 	date?: Date; // Resolved date (for date types)
+	dateRange?: {
+		// Resolved date range
+		start: Date;
+		end: Date;
+	};
 	size?: {
 		// Parsed size (for size type)
 		op: "gt" | "lt" | "eq";
@@ -229,6 +250,7 @@ type TParseResult = TParsedTerm[];
 
 type TParserOptions = {
 	operators?: TOperatorDef[];
+	customOperators?: TOperatorDef[];
 	caseSensitive?: boolean;
 	allowedOperators?: string[];
 	disallowedOperators?: string[];
