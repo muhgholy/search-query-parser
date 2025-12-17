@@ -1,3 +1,21 @@
+# [3.0.0](https://github.com/muhgholy/search-query-parser/compare/v2.0.0...v3.0.0) (2025-12-17)
+
+
+* feat!: simplify TOperatorDef API by removing redundancy ([670397d](https://github.com/muhgholy/search-query-parser/commit/670397d96e932ef2709c9733973f92f173d1e9ba))
+
+
+### BREAKING CHANGES
+
+* TOperatorDef type signature has changed. The 'type' field that previously held the term type has been removed, and 'valueType' has been renamed to 'type'. The operator's 'name' now becomes the resulting term's 'type'.
+
+Before:
+{ name: 'priority', aliases: ['p'], type: 'priority', valueType: 'string', allowNegation: true }
+
+After:
+{ name: 'priority', aliases: ['p'], type: 'string', allowNegation: true }
+
+This simplifies the API by eliminating redundancy between 'name' and 'type', making custom operators more intuitive to define.
+
 # [2.0.0](https://github.com/muhgholy/search-query-parser/compare/v1.0.0...v2.0.0) (2025-12-13)
 
 
