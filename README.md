@@ -109,6 +109,9 @@ Comma-separated values are automatically treated as OR conditions.
 | `header-k:` | `hk:`              | Header key        | `header-k:X-Custom`       |
 | `header-v:` | `hv:`              | Header value      | `header-v:"custom value"` |
 | `date:`     | `d:`               | Date/Range        | `date:2024-01-01`         |
+| `before:`   | `b4:`, `older:`    | Before date       | `before:2024-12-31`       |
+| `after:`    | `af:`, `newer:`    | After date        | `after:2024-01-01`        |
+| `size:`     | `larger:`, `smaller:` | Size filter    | `size:>1mb`               |
 
 ### Date Filters
 
@@ -149,7 +152,7 @@ const terms = parse('"hello world" from:john -spam', {
 	// OR
 	operatorsDisallowed: ["size"], // Block specific operators
 	// Custom operators
-	operators: [{ name: "priority", aliases: ["p"], type: "priority", valueType: "string", allowNegation: true }],
+	operators: [{ name: "priority", aliases: ["p"], type: "string", allowNegation: true }],
 });
 ```
 
@@ -215,8 +218,8 @@ type TDefaultTermType =
 	| "to" // To filter
 	| "subject" // Subject filter
 	| "body" // Body filter
-	| "header-key" // Header key
-	| "header-value" // Header value
+	| "header-k" // Header key
+	| "header-v" // Header value
 	| "has" // Has property
 	| "is" // Status filter
 	| "in" // Folder filter
@@ -248,6 +251,13 @@ type TParsedTerm<T extends string = TTermType> = {
 };
 
 type TParseResult<T extends string = TTermType> = TParsedTerm<T>[];
+
+type TOperatorDef<T extends string = TTermType> = {
+	name: string; // Operator name (becomes term type)
+	aliases: string[]; // Alternative names
+	type: "string" | "date" | "size"; // Value parsing type
+	allowNegation: boolean; // Whether negation is allowed
+};
 
 type TParserOptions<T extends string = TTermType> = {
 	operators?: TOperatorDef<T>[];
